@@ -29,7 +29,7 @@ void lzss_set_window(u8 *window, int window_size, int init_chr) {
     }
 }
 
-int lzss_decompress(unsigned char *src, int srclen, unsigned char *dst, int dstlen, config_t cfg) {
+int lzss_decompress(unsigned char *src, int srclen, unsigned char *dst, int dstlen, lzss_config cfg) {
     //int EI = 12;    /* typically 10..13 */
     //int EJ = 4;     /* typically 4..5 */
     //int P  = 2;     /* If match length <= P then output one character */
@@ -95,12 +95,12 @@ quit:
     return(dst - dststart);
 }
 
-int lzss_compress(u8 *in, int insz, u8 *out, int outsz, config_t cfg) {
+int lzss_compress(u8 *in, int insz, u8 *out, int outsz, lzss_config cfg) {
 
 int N =		 4096;	/* size of ring buffer */
 int F =		   18;	/* upper limit for match_length */
-int THRESHOLD =	2;   /* encode string into position and length
-						   if match_length is greater than this */
+//int THRESHOLD =	2;   /* encode string into position and length
+//						   if match_length is greater than this */
 int NIL;//			N;	/* index for root of binary search trees */
 //int init_chr = ' ';
 
@@ -235,7 +235,7 @@ void Encode(void)
 	do {
 		if (match_length > len) match_length = len;  /* match_length
 			may be spuriously long near the end of text. */
-		if (match_length <= THRESHOLD) {
+		if (match_length <= cfg.THRESHOLD) {
 			match_length = 1;  /* Not long enough match.  Send one byte. */
 			code_buf[0] |= mask;  /* 'send one byte' flag */
 			code_buf[code_buf_ptr++] = text_buf[r];  /* Send uncoded. */
@@ -243,7 +243,7 @@ void Encode(void)
 			code_buf[code_buf_ptr++] = (unsigned char) match_position;
 			code_buf[code_buf_ptr++] = (unsigned char)
 				(((match_position >> 4) & 0xf0)
-			  | (match_length - (THRESHOLD + 1)));  /* Send position and
+			  | (match_length - (cfg.THRESHOLD + 1)));  /* Send position and
 					length pair. Note match_length > THRESHOLD. */
 		}
 		if ((mask <<= 1) == 0) {  /* Shift mask left one bit. */

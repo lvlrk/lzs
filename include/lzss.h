@@ -9,13 +9,16 @@ typedef struct {
 	int P;
 	int rless;
 	int init_chr;
-} config_t;
+	int THRESHOLD;
+} lzss_config;
 
-static const config_t lzss0 = { 12, 4, 2, 2, 0 };
-static const config_t lzss = { 12, 4, 2, 2, ' ' };
-static const config_t okumura = { 11, 4, 1, 1, ' ' };
+static const lzss_config lzss0 = { 12, 4, 2, 2, 0, 2 };
+static const lzss_config lzss = { 12, 4, 2, 2, ' ', 2 };
+static const lzss_config okumura = { 11, 4, 1, 1, ' ', 2 };
+static const lzss_config lz770 = { 12, 4, 2, 2, ' ', 0 };
+static const lzss_config lz77 = { 12, 4, 2, 2, 0, 0 };
 
-int lzss_decompress(unsigned char *src, int srclen, unsigned char *dst, int dstlen, config_t cfg);
-int lzss_compress(u8 *in, int insz, u8 *out, int outsz, config_t cfg);
+int lzss_decompress(unsigned char *src, int srclen, unsigned char *dst, int dstlen, lzss_config cfg);
+int lzss_compress(u8 *in, int insz, u8 *out, int outsz, lzss_config cfg);
 
 #endif

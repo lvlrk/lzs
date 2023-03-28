@@ -23,6 +23,11 @@ char *ealloc = "cant allocate memory";
 char *erinfile = "INFILE required";
 char *eroutfile = "OUTFILE required";
 char *essize = "size too small";
+char *eireset = "cant re-set INFILE";
+char *eoreset = "cant re-set OUTFILE";
+char *erformat = "FORMAT required";
+
+// too lazy to implement warning / log system
 char *ldecompress = "lzs: got .lzs file; decompressing";
 char *lcompress = "lzs: file not recognized; compressing";
 char *larc = "lzs: looks like a .arc file";
@@ -32,7 +37,8 @@ const char *usage = "usage: lzs [-oN]... [INFILE]\n"
 	"     --help          show this help information and exit\n"
 	"     --version       show version information and exit\n"
 	" -o, --outfile       set output file\n"
-	" -N, --nmm-style     replace extension on compressed OUTFILE\n";
+	" -N, --nmm-style     replace extension on compressed OUTFILE\n"
+	" -F, --format        set compression/decompression format\n";
 
 int main(int argc, char **argv) {
 	char *infile = NULL, *outfile = NULL, zmagic[4], 
@@ -42,7 +48,8 @@ int main(int argc, char **argv) {
 	struct stat st;
 	FILE *fp = NULL;
 	sszl_header_t sh;
-	int outfile_set = 0, nmm_style = 0, err_set = 0;
+	int outfile_set = 0, infile_set = 0, nmm_style = 0, err_set = 0, cus_cfg = 0;
+	lzss_config lzcfg = lzss0;
 
 	if(argc < 2) {
 		err_set = 1;
@@ -57,30 +64,58 @@ int main(int argc, char **argv) {
 			fputs(usage, stdout);
 			return 0;
 		} else if(!strcmp(argv[i], "--version")) {
-			fputs("lzs-1.1 lvlrk\n", stdout);
+			fputs("lzs-1.2 lvlrk\n", stdout);
 			return 0;
 		} else if(!strcmp(argv[i], "-N") || !strcmp(argv[i], "--nmm-style"))
 			nmm_style = 1;
 		else if(argv[i][0] != '-') {
 			if(i > 0) {
 				if(argv[i - 1][0] != '-') {
-					if(stat(argv[i], &st) != -1) {
-						strncpy(infile, argv[i], 128);
+					if(!infile_set) {
+						if(stat(argv[i], &st) != -1) {
+							strncpy(infile, argv[i], 128);
+						} else {
+							err_set = 1;
+							err = eistat;
+							goto quit;
+						}
 					} else {
 						err_set = 1;
-						err = eistat;
+						err = eireset;
 						goto quit;
 					}
 				}
 			}
 		} else if(!strcmp(argv[i], "-o") || !strcmp(argv[i], "--outfile")) {
-			if(argv[i + 1]) {
-				outfile_set = 1;
-
-				strncpy(outfile, argv[i + 1], 128);
+			if(!outfile_set) {
+				if(argv[i + 1]) {
+					outfile_set = 1;
+	
+					strncpy(outfile, argv[i + 1], 128);
+				} else {
+					err_set = 1;
+					err = eroutfile;
+					goto quit;
+				}
 			} else {
 				err_set = 1;
-				err = eroutfile;
+				err = eoreset;
+				goto quit;
+			}
+		} else if(!strcmp(argv[i], "-F") || !strcmp(argv[i], "--format")) {
+			if(argv[i + 1]) {
+				cus_cfg = 1;
+				
+				if(!strcmp(argv[i + 1], "lzs"))
+					lzcfg = lzss0;
+				else if(!strcmp(argv[i + 1], "lzss"))
+					lzcfg = lzss;
+				else if(!strcmp(argv[i + 1], "lz77")) {
+					lzcfg = lz77;
+				}
+			} else {
+				err_set = 1;
+				err = erformat;
 				goto quit;
 			}
 		}
@@ -238,8 +273,14 @@ int main(int argc, char **argv) {
 
 		if(!outfile_set) {
 			strncpy(outfile, infile, 128);
-			if(nmm_style)
-				outfile[strlen(outfile) - strlen(strrchr(outfile, '.'))] = 0;
+			
+			if(nmm_style) {
+				match = strrchr(outfile, '.');
+
+				if(match)
+					outfile[strlen(outfile) - strlen(match)] = 0;
+			}
+			
 			strncat(outfile, ".lzs", 5);
 		}
 
